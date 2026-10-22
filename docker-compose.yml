@@ -20,6 +20,10 @@ services:
       # Optional: path (inside the container) to a cookies.txt export, used to
       # bypass YouTube's "confirm you're not a bot" checks. See COOKIES_FILE below.
       COOKIES_FILE: "${COOKIES_FILE:-}"
+      # Keep yt-dlp current on start so YouTube breakages self-heal. Set to 0 to pin.
+      YTDLP_AUTO_UPDATE: "${YTDLP_AUTO_UPDATE:-1}"
+      # Player clients to use; default avoids the broken tv_downgraded client.
+      YTDLP_PLAYER_CLIENT: "${YTDLP_PLAYER_CLIENT:-default,-tv_downgraded}"
     volumes:
       # LEFT side = path to your Navidrome music library on the ZimaOS host.
       # On ZimaOS this is typically something under /DATA, e.g. /DATA/Media/Music.

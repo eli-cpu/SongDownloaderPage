@@ -4,19 +4,31 @@ FROM node:20-alpine
 
 # System deps: ffmpeg for audio extraction, python3 for yt-dlp runtime,
 # su-exec to drop privileges, tini as PID 1, ca-certs for HTTPS.
+# deno provides the external JavaScript runtime that recent yt-dlp requires to
+# solve YouTube's player challenges (see yt-dlp issue #15012). Without a JS
+# runtime, YouTube extraction fails with errors like "The page needs to be
+# reloaded." on datacenter/VPS IPs.
 RUN apk add --no-cache \
       ffmpeg \
       python3 \
       ca-certificates \
       su-exec \
       tini \
-      curl
+      curl \
+      deno
 
-# Install yt-dlp as a standalone binary. Pin a version for reproducible builds;
-# override at build time with --build-arg YTDLP_VERSION=<version or 'latest'>.
-ARG YTDLP_VERSION=2025.09.26
+# Install yt-dlp as a standalone binary. Default to the nightly/latest build:
+# YouTube frequently changes its player and breaks older yt-dlp releases (e.g.
+# the "The page needs to be reloaded." error), and fixes land in yt-dlp within
+# days. Pin a known-good version for reproducible builds by overriding at build
+# time: --build-arg YTDLP_VERSION=<version>.
+#
+# Bump CACHEBUST (or rebuild with --no-cache) to force a fresh download of the
+# latest yt-dlp when YouTube breaks extraction again.
+ARG YTDLP_VERSION=latest
+ARG CACHEBUST=1
 RUN set -eux; \
-    if [ "$YTDLP_VERSION" = "latest" ]; then \
+    if [ "$YTDLP_VERSION" = "latest" ] || [ "$YTDLP_VERSION" = "nightly" ]; then \
       url="https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp"; \
     else \
       url="https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp"; \

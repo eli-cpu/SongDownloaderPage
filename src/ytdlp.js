@@ -19,6 +19,44 @@ function authArgs() {
 }
 
 /**
+ * YouTube-specific extractor args. YouTube frequently breaks individual player
+ * clients (e.g. the "The page needs to be reloaded." error comes from the
+ * tv/tv_downgraded client). Selecting a set of known-working clients lets
+ * yt-dlp fall back when one is blocked. Override with YTDLP_PLAYER_CLIENT, e.g.
+ *   YTDLP_PLAYER_CLIENT=default,-tv_downgraded
+ *   YTDLP_PLAYER_CLIENT=android,web_safari,tv
+ * Set it to "none" to disable this override entirely.
+ */
+function extractorArgs() {
+  const client = (process.env.YTDLP_PLAYER_CLIENT ?? "default,-tv_downgraded").trim();
+  if (!client || client.toLowerCase() === "none") return [];
+  return ["--extractor-args", `youtube:player_client=${client}`];
+}
+
+/**
+ * Turn common (and cryptic) YouTube/yt-dlp failures into an actionable hint.
+ */
+function explainError(stderr) {
+  if (!stderr) return stderr;
+  const lower = stderr.toLowerCase();
+  const isBotBlock =
+    lower.includes("page needs to be reloaded") ||
+    lower.includes("sign in to confirm") ||
+    lower.includes("confirm you're not a bot") ||
+    lower.includes("player response playability");
+  if (isBotBlock) {
+    return (
+      "YouTube blocked this request (bot/anti-automation check). Try: " +
+      "1) update yt-dlp to the latest version, " +
+      "2) provide a cookies.txt export via COOKIES_FILE, and/or " +
+      "3) set YTDLP_PLAYER_CLIENT to a working client. " +
+      `Original error: ${stderr}`
+    );
+  }
+  return stderr;
+}
+
+/**
  * Run yt-dlp with the given args. Returns a promise resolving to stdout.
  * Optionally streams progress lines to onProgress(line).
  */
@@ -60,7 +98,7 @@ function runYtDlp(args, { onProgress } = {}) {
       if (code === 0) {
         resolve(stdout);
       } else {
-        reject(new Error(stderr.trim() || `yt-dlp exited with code ${code}`));
+        reject(new Error(explainError(stderr.trim()) || `yt-dlp exited with code ${code}`));
       }
     });
   });
@@ -78,6 +116,7 @@ export async function searchYouTube(query, limit = 8) {
     "--flat-playlist",
     "--default-search",
     "ytsearch",
+    ...extractorArgs(),
     ...authArgs(),
   ];
 
@@ -134,6 +173,7 @@ export async function downloadAudio(target, outputDir, { onProgress, format = "m
     "--restrict-filenames",
     "--output", `${outputDir}/%(uploader)s/%(title)s.%(ext)s`,
     "--print", "after_move:filepath",
+    ...extractorArgs(),
     ...authArgs(),
   ];
 

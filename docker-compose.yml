@@ -1,0 +1,53 @@
+services:
+  music-grabber:
+    build: .
+    # Or use a prebuilt image after pushing to a registry:
+    # image: ghcr.io/youruser/music-grabber:latest
+    container_name: music-grabber
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    environment:
+      # Match these to the owner of your music share so Navidrome can read the files.
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      MUSIC_DIR: /music
+      # Audio output: mp3 is the most compatible for Navidrome. Options: mp3, m4a, opus, flac
+      AUDIO_FORMAT: "${AUDIO_FORMAT:-mp3}"
+      # 0 = best quality VBR for mp3
+      AUDIO_QUALITY: "${AUDIO_QUALITY:-0}"
+      SEARCH_LIMIT: "${SEARCH_LIMIT:-8}"
+      # Optional: path (inside the container) to a cookies.txt export, used to
+      # bypass YouTube's "confirm you're not a bot" checks. See COOKIES_FILE below.
+      COOKIES_FILE: "${COOKIES_FILE:-}"
+    volumes:
+      # LEFT side = path to your Navidrome music library on the ZimaOS host.
+      # On ZimaOS this is typically something under /DATA, e.g. /DATA/Media/Music.
+      - "${MUSIC_LIBRARY:-/DATA/Media/Music}:/music"
+      # Optional: mount a Netscape-format cookies.txt to authenticate with YouTube.
+      # Create ./cookies.txt (gitignored) and set COOKIES_FILE=/cookies.txt in .env.
+      - "${COOKIES_HOST_FILE:-./cookies.txt}:/cookies.txt:ro"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # OPTIONAL: run Navidrome alongside the grabber, pointed at the same library.
+  # Remove this block if you already run Navidrome elsewhere on ZimaOS.
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    restart: unless-stopped
+    profiles: ["with-navidrome"]
+    ports:
+      - "${NAVIDROME_PORT:-4533}:4533"
+    environment:
+      ND_SCANSCHEDULE: 1m
+      ND_LOGLEVEL: info
+      ND_MUSICFOLDER: /music
+    user: "${PUID:-1000}:${PGID:-1000}"
+    volumes:
+      - "${MUSIC_LIBRARY:-/DATA/Media/Music}:/music:ro"
+      - "${NAVIDROME_DATA:-./navidrome-data}:/data"

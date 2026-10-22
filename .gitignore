@@ -1,0 +1,7 @@
+node_modules/
+.env
+downloads/
+music/
+navidrome-data/
+npm-debug.log
+.DS_Store

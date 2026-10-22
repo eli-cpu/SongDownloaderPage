@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f1115" />
+  <title>Music Grabber</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <h1><span class="note">🎵</span> Music Grabber</h1>
+      <p class="sub">Search YouTube or paste a link. Audio is saved to your Navidrome library.</p>
+      <div class="status" id="status" aria-live="polite"></div>
+    </header>
+
+    <section class="searchbar">
+      <input
+        type="text"
+        id="query"
+        placeholder="Search a song or paste a YouTube URL…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button id="searchBtn" class="btn primary">Search</button>
+      <button id="grabBtn" class="btn" title="Download directly from a URL or best search match">Grab</button>
+    </section>
+
+    <section class="results" id="results" aria-live="polite"></section>
+
+    <section class="jobs">
+      <h2>Downloads</h2>
+      <div id="jobs" class="joblist"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# Netscape HTTP Cookie File
+# This is an empty placeholder so the Docker bind mount resolves.
+# To authenticate with YouTube (and avoid "confirm you're not a bot" errors):
+#   1. Install a "Get cookies.txt" browser extension.
+#   2. Log in to youtube.com, export cookies for the site.
+#   3. Replace the contents of this file with the exported cookies.
+#   4. In .env set:  COOKIES_FILE=/cookies.txt
+#   5. docker compose up -d

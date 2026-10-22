@@ -1,0 +1,18 @@
+{
+  "name": "song-downloader",
+  "version": "1.0.0",
+  "description": "YouTube-to-Navidrome music downloader with web UI, powered by yt-dlp + ffmpeg",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "lint": "node --check src/server.js && node --check src/ytdlp.js && node --check src/jobs.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "4.19.2"
+  }
+}

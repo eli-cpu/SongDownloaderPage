@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { stat } from "node:fs/promises";
 
 const YTDLP_BIN = process.env.YTDLP_BIN || "yt-dlp";
 
@@ -177,24 +178,55 @@ export async function downloadAudio(target, outputDir, { onProgress, format = "m
     ...authArgs(),
   ];
 
-  let finalPath = null;
+  // The `--print after_move:filepath` line is the authoritative final path.
+  // yt-dlp prints it on its own line (no log prefix) only after the file has
+  // been fully written and moved into place. We deliberately do NOT treat
+  // progress/info lines (e.g. "[download] Destination: ...", "[ExtractAudio]
+  // Destination: ...") as the result, because those point at intermediate or
+  // not-yet-finished files and caused jobs to report success with no file.
+  const candidates = [];
   const stdout = await runYtDlp(args, {
     onProgress: (line) => {
-      // Capture the final filepath printed via after_move:filepath
-      if (line.startsWith(outputDir) || /\.(mp3|m4a|opus|flac)$/i.test(line)) {
-        finalPath = line;
+      const trimmed = line.trim();
+      // A bare path line with no yt-dlp "[...]" prefix is the printed filepath.
+      if (
+        !trimmed.startsWith("[") &&
+        (trimmed.startsWith(outputDir) || /\.(mp3|m4a|opus|flac)$/i.test(trimmed))
+      ) {
+        candidates.push(trimmed);
       }
       if (onProgress) onProgress(line);
     },
   });
 
-  // Fallback: scan full stdout for a printed path
-  if (!finalPath) {
-    const match = stdout.split("\n").reverse().find((l) => /\.(mp3|m4a|opus|flac)$/i.test(l.trim()));
-    if (match) finalPath = match.trim();
+  // Fallback: scan full stdout for a bare printed path.
+  if (!candidates.length) {
+    for (const l of stdout.split("\n")) {
+      const t = l.trim();
+      if (!t.startsWith("[") && /\.(mp3|m4a|opus|flac)$/i.test(t)) candidates.push(t);
+    }
   }
 
-  return { filepath: finalPath };
+  // Verify on disk. A job must not be reported as done unless the file is
+  // actually present. Prefer the last candidate (the final destination).
+  for (const candidate of candidates.reverse()) {
+    try {
+      const info = await stat(candidate);
+      if (info.isFile() && info.size > 0) {
+        return { filepath: candidate };
+      }
+    } catch {
+      // not this one; keep looking
+    }
+  }
+
+  throw new Error(
+    "yt-dlp finished but no output file was found on disk. " +
+      (candidates.length
+        ? `Expected: ${candidates[candidates.length - 1]}. `
+        : "No destination path was reported. ") +
+      "Check that the music volume is mounted correctly and writable."
+  );
 }
 
 /** Verify yt-dlp is callable; returns version string. */
